@@ -201,9 +201,10 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
     {
         // slot is a property
         const SfxType* pType = pSlot->GetType();
-        std::unique_ptr<SfxPoolItem> pItem(pType->CreateItem());
+        const bool bSlotItem(pType->isSlotItem());
+        std::unique_ptr<SfxPoolItem> pItem(!bSlotItem ? pType->CreateSfxPoolItem() : nullptr);
 
-        if ( !pItem )
+        if(!bSlotItem && nullptr == pItem)
         {
             SAL_WARN( "sfx", "No creator method for item: " << nSlotId );
             return;
@@ -211,7 +212,10 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
 
         sal_uInt16 nWhich = rSet.GetPool()->GetWhich(nSlotId);
         bool bConvertTwips = ( rSet.GetPool()->GetMetric( nWhich ) == MapUnit::MapTwip );
-        pItem->SetWhich( nWhich );
+        if(!bSlotItem)
+        {
+            pItem->SetWhich( nWhich );
+        }
         sal_uInt16 nSubCount = pType->nAttribs;
 
         const beans::PropertyValue& rProp = pPropsVal[0];
@@ -220,12 +224,31 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
         {
             // there is only one parameter and its name matches the name of the property,
             // so it's either a simple property or a complex property in one single UNO struct
-            if( pItem->PutValue( rProp.Value, bConvertTwips ? CONVERT_TWIPS : 0 ) )
-                // only use successfully converted items
-                rSet.Put( *pItem );
+            if(!bSlotItem)
+            {
+                if( pItem->PutValue( rProp.Value, bConvertTwips ? CONVERT_TWIPS : 0 ) )
+                {
+                    // only use successfully converted items
+                    rSet.Put( *pItem );
+                }
+                else
+                {
+                    SAL_WARN( "sfx", "Property not convertible: " << pSlot->pUnoName );
+                }
+            }
             else
             {
-                SAL_WARN( "sfx", "Property not convertible: " << pSlot->pUnoName );
+                Item::IBase::AnyIDArgs aArgs;
+                aArgs.push_back(Item::IBase::AnyIDPair(rProp.Value, bConvertTwips ? CONVERT_TWIPS : 0));
+                Item::IBase::SharedPtr aSlotItem(pType->CreateSlotItem(aArgs));
+                if(aSlotItem)
+                {
+                    rSet.slotSet().SetSlot(nWhich, aSlotItem);
+                }
+                else
+                {
+                    SAL_WARN( "sfx", "Property not convertible: " << pSlot->pUnoName );
+                }
             }
         }
 #ifdef DBG_UTIL
@@ -250,6 +273,8 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
 #endif
             // complex property; collect sub items from the parameter set and reconstruct complex item
             sal_uInt16 nFound=0;
+            Item::IBase::AnyIDArgs aArgs;
+
             for ( sal_Int32 n=0; n<nCount; n++ )
             {
                 const beans::PropertyValue& rPropValue = pPropsVal[n];
@@ -263,12 +288,25 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
                     {
                         sal_uInt8 nSubId = static_cast<sal_uInt8>(static_cast<sal_Int8>(pType->aAttrib[nSub].nAID));
                         if ( bConvertTwips )
+                        {
                             nSubId |= CONVERT_TWIPS;
-                        if ( pItem->PutValue( rPropValue.Value, nSubId ) )
-                            nFound++;
+                        }
+
+                        if(!bSlotItem)
+                        {
+                            if ( pItem->PutValue( rPropValue.Value, nSubId ) )
+                            {
+                                nFound++;
+                            }
+                            else
+                            {
+                                SAL_WARN( "sfx.appl", "Property not convertible: " << pSlot->pUnoName);
+                            }
+                        }
                         else
                         {
-                            SAL_WARN( "sfx.appl", "Property not convertible: " << pSlot->pUnoName);
+                            aArgs.push_back(Item::IBase::AnyIDPair(rPropValue.Value, nSubId));
+                            nFound++;
                         }
                         break;
                     }
@@ -280,7 +318,24 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
 
             // at least one part of the complex item must be present; other parts can have default values
             if ( nFound > 0 )
-                rSet.Put( *pItem );
+            {
+                if(!bSlotItem)
+                {
+                    rSet.Put( *pItem );
+                }
+                else
+                {
+                    Item::IBase::SharedPtr aSlotItem(pType->CreateSlotItem(aArgs));
+                    if(aSlotItem)
+                    {
+                        rSet.slotSet().SetSlot(nWhich, aSlotItem);
+                    }
+                    else
+                    {
+                        SAL_WARN( "sfx.appl", "Property not convertible: " << pSlot->pUnoName);
+                    }
+                }
+            }
         }
 
         return;
@@ -298,7 +353,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
     for ( sal_uInt16 nArgs=0; nArgs<nMaxArgs; nArgs++ )
     {
         const SfxFormalArgument &rArg = bIsMediaDescriptor ? aFormalArgs[nArgs] : pSlot->GetFormalArgument( nArgs );
-        std::unique_ptr<SfxPoolItem> pItem(rArg.CreateItem());
+        std::unique_ptr<SfxPoolItem> pItem(rArg.CreateSfxPoolItem());
         if ( !pItem )
         {
             SAL_WARN( "sfx", "No creator method for argument: " << rArg.pName );

@@ -238,9 +238,9 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
             }
             else
             {
-                Item::IBase::AnyIDArgs aArgs;
-                aArgs.push_back(Item::IBase::AnyIDPair(rProp.Value, bConvertTwips ? CONVERT_TWIPS : 0));
-                Item::IBase::SharedPtr aSlotItem(pType->CreateSlotItem(aArgs));
+                Item::ItemBase::AnyIDArgs aArgs;
+                aArgs.push_back(Item::ItemBase::AnyIDPair(rProp.Value, bConvertTwips ? CONVERT_TWIPS : 0));
+                Item::ItemBase::SharedPtr aSlotItem(pType->CreateSlotItem(aArgs));
                 if(aSlotItem)
                 {
                     rSet.slotSet().SetSlot(nWhich, aSlotItem);
@@ -273,7 +273,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
 #endif
             // complex property; collect sub items from the parameter set and reconstruct complex item
             sal_uInt16 nFound=0;
-            Item::IBase::AnyIDArgs aArgs;
+            Item::ItemBase::AnyIDArgs aArgs;
 
             for ( sal_Int32 n=0; n<nCount; n++ )
             {
@@ -305,7 +305,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
                         }
                         else
                         {
-                            aArgs.push_back(Item::IBase::AnyIDPair(rPropValue.Value, nSubId));
+                            aArgs.push_back(Item::ItemBase::AnyIDPair(rPropValue.Value, nSubId));
                             nFound++;
                         }
                         break;
@@ -325,7 +325,7 @@ void TransformParameters( sal_uInt16 nSlotId, const uno::Sequence<beans::Propert
                 }
                 else
                 {
-                    Item::IBase::SharedPtr aSlotItem(pType->CreateSlotItem(aArgs));
+                    Item::ItemBase::SharedPtr aSlotItem(pType->CreateSlotItem(aArgs));
                     if(aSlotItem)
                     {
                         rSet.slotSet().SetSlot(nWhich, aSlotItem);

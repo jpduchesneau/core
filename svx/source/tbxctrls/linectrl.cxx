@@ -71,7 +71,7 @@ SvxLineStyleToolBoxControl::~SvxLineStyleToolBoxControl()
 
 void SvxLineStyleToolBoxControl::StateChanged (
 
-    sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState, const Item::IBase::SharedPtr& /* rSlotItem */ )
+    sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState, const Item::ItemBase::SharedPtr& /* rSlotItem */ )
 
 {
     SvxLineBox* pBox = static_cast<SvxLineBox*>( GetToolBox().GetItemWindow( GetId() ) );
@@ -195,7 +195,7 @@ SvxLineWidthToolBoxControl::~SvxLineWidthToolBoxControl()
 
 
 void SvxLineWidthToolBoxControl::StateChanged(
-    sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState, const Item::IBase::SharedPtr& /* rSlotItem */ )
+    sal_uInt16 nSID, SfxItemState eState, const SfxPoolItem* pState, const Item::ItemBase::SharedPtr& /* rSlotItem */ )
 {
     SvxMetricField* pFld = static_cast<SvxMetricField*>(
                            GetToolBox().GetItemWindow( GetId() ));

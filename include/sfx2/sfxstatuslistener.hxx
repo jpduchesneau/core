@@ -31,6 +31,7 @@
 #include <com/sun/star/frame/XStatusListener.hpp>
 
 #include <cppuhelper/implbase.hxx>
+#include <item/base/ItemBase.hxx>
 
 class SFX2_DLLPUBLIC SfxStatusListener : public cppu::WeakImplHelper<
                           css::frame::XStatusListener,
